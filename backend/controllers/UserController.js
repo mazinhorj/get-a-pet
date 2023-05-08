@@ -5,6 +5,7 @@ const User = require('../models/User')
 // helpers
 const createUserToken = require('../helpers/create-user-token')
 const getToken = require('../helpers/get-token')
+const getUserByToken = require('../helpers/get-user-by-token')
 
 
 module.exports = class UserController {
@@ -124,25 +125,84 @@ module.exports = class UserController {
   static async editUser(req, res) {
 
     const id = req.params.id
+
+    // usuario existe?
+    const token = getToken(req)
+    const user = await getUserByToken(token)
     const { name, email, phone, password, confirmpassword } = req.body
 
-    let image = ''
+    // let image = ''
+
+    if (req.file) {
+      user.image = req.file.filename
+    }
 
     // validações
+    if (!name) {
+      res.status(422).json({ message: "O Nome é obrigatório." })
+      return
+    }
 
-
-    // verificar se existe
-    const user = await User.findByPk(id)
-    if (!user) {
+    if (!email) {
+      res.status(422).json({ message: "O E-mail é obrigatório." })
+      return
+    }
+    // verificar se email já está cadastrado
+    const userExists = await User.findOne({where: {email: email}})
+    if (user.email !== email && userExists) {
       res.status(422).json({
-        message: "Usuário não encontrado."
+        message: "E-mail já está em uso."
       })
       return
     }
 
+    user.email = email
 
-    res.status(200).json({
-      message: "Usuário atualizado."
-    })
+    if (!phone) {
+      res.status(422).json({ message: "O telefone é obrigatório." })
+      return
+    }
+
+    user.phone = phone
+
+    if (password !== confirmpassword) {
+      res.status(422).json({ message: "As senhas não conferem." })
+      return
+    } else if (password === confirmpassword && password != null) {
+      const salt = await bcrypt.genSalt(12)
+      const passHash = await bcrypt.hash(password, salt)
+      user.password = passHash
+    }
+    console.log(user)
+
+    const userData = {
+      name, email, phone, password, image
+    }
+
+    try {
+      const updatedUser = await User.update(userData, {
+        where: {
+          id: id
+        }
+      })
+      console.log(updatedUser)
+      res.status(200).json({
+        message: "Usuário atualizado com sucesso."
+      })
+    } catch (error) {
+      res.status(500).json({message: error})
+    }
+
+    // verificar se existe
+    // const user = await User.findByPk(id)
+    // if (!user) {
+    //   res.status(422).json({
+    //     message: "Usuário não encontrado."
+    //   })
+    //   return
+    // }
+
+
+    
   }
 }
