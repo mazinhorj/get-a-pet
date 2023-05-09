@@ -9,10 +9,10 @@ const getUserByToken = require('../helpers/get-user-by-token')
 
 
 module.exports = class UserController {
-  
+
   // CADASTRO DE USUÁRIO
   static async register(req, res) {
-    const { name, email, phone, password, confirmpassword} = req.body
+    const { name, email, phone, password, confirmpassword } = req.body
     // validations
     if (!name) {
       res.status(422).json({ message: "O Nome é obrigatório." })
@@ -56,9 +56,9 @@ module.exports = class UserController {
       const newUser = await User.create({ name, email, phone, password: passHash })
       await createUserToken(newUser, req, res)
       console.log(newUser)
-      
+
     } catch (error) {
-      res.status(500).json({message: error})
+      res.status(500).json({ message: error })
     }
     // res.status(201).json({message: `Usuário ${name} cadastrado com sucesso.`})
   }
@@ -66,7 +66,7 @@ module.exports = class UserController {
   // LOGIN
   static async login(req, res) {
     const { email, password } = req.body
-    
+
     if (!email) {
       res.status(422).json({ message: "O E-mail é obrigatório." })
       return
@@ -94,9 +94,9 @@ module.exports = class UserController {
 
   // USUARIO COM TOKEN
   static async chkUser(req, res) {
-    
+
     let currentUser
-    
+
     if (req.headers.authorization) {
       const token = getToken(req)
       const decoded = jwt.verify(token, 'SegredinhoDoToken')
@@ -111,30 +111,42 @@ module.exports = class UserController {
   // Usuário por ID
   static async getUserById(req, res) {
     const id = req.params.id
-    const user = await User.findByPk(id)
-    user.password = undefined
+    const user = await User.findByPk(id, {
+      attributes: { exclude: ['password', 'createdAt', 'updatedAt'] }
+    })
     if (!user) {
       res.status(422).json({
         message: "Usuário não encontrado."
       })
+      return
     }
-    res.status(200).json({user})
+    // user.password = undefined
+
+    res.status(200).json({ user })
+    return
   }
 
   // Editar usuário
   static async editUser(req, res) {
 
     const id = req.params.id
+    const idExists = await User.findOne({ where: { id: id } })
+    if (!idExists) {
+      res.status(422).json({
+        message: "Usuário não encontrado."
+      })
+      return
+    }
 
     // usuario existe?
     const token = getToken(req)
     const user = await getUserByToken(token)
     const { name, email, phone, password, confirmpassword } = req.body
 
-    // let image = ''
+    let image = ''
 
     if (req.file) {
-      user.image = req.file.filename
+      image = req.file.filename 
     }
 
     // validações
@@ -142,28 +154,32 @@ module.exports = class UserController {
       res.status(422).json({ message: "O Nome é obrigatório." })
       return
     }
+    user.name = name
 
     if (!email) {
       res.status(422).json({ message: "O E-mail é obrigatório." })
       return
     }
     // verificar se email já está cadastrado
-    const userExists = await User.findOne({where: {email: email}})
+    const userExists = await User.findOne({ where: { email: email } })
     if (user.email !== email && userExists) {
       res.status(422).json({
-        message: "E-mail já está em uso."
+        message: "E-mail já está em uso. Utilize outro."
       })
       return
     }
-
     user.email = email
 
     if (!phone) {
       res.status(422).json({ message: "O telefone é obrigatório." })
       return
     }
-
     user.phone = phone
+
+    if (image) {
+      const imageName = req.file.filename
+      user.image = imageName
+    }
 
     if (password !== confirmpassword) {
       res.status(422).json({ message: "As senhas não conferem." })
@@ -173,16 +189,19 @@ module.exports = class UserController {
       const passHash = await bcrypt.hash(password, salt)
       user.password = passHash
     }
-    console.log(user)
+    
+    const newPassword = user.password
 
     const userData = {
-      name, email, phone, password, image
+      name, email, phone, password: newPassword, image
     }
+
+    console.log(userData)
 
     try {
       const updatedUser = await User.update(userData, {
         where: {
-          id: id
+          id
         }
       })
       console.log(updatedUser)
@@ -190,19 +209,7 @@ module.exports = class UserController {
         message: "Usuário atualizado com sucesso."
       })
     } catch (error) {
-      res.status(500).json({message: error})
+      res.status(500).json({ message: error })
     }
-
-    // verificar se existe
-    // const user = await User.findByPk(id)
-    // if (!user) {
-    //   res.status(422).json({
-    //     message: "Usuário não encontrado."
-    //   })
-    //   return
-    // }
-
-
-    
   }
 }
