@@ -53,7 +53,7 @@ module.exports = class UserController {
       res.status(422).json({ message: "CPF já cadastrado." })
       return
     }
-    console.log(`CPF formatado: ${fucpf}`)
+    // console.log(`CPF formatado: ${fucpf}`)
 
     //verificar se existe
     const userExists = await User.findOne({ where: { email: email } })
@@ -71,7 +71,7 @@ module.exports = class UserController {
     try {
       const newUser = await User.create({ name, email, phone, password: passHash, ucpf: fucpf })
       await createUserToken(newUser, req, res)
-      console.log(newUser)
+      // console.log(newUser)
 
     } catch (error) {
       res.status(500).json({ message: error })
@@ -183,9 +183,8 @@ module.exports = class UserController {
       })
       return
     }
-    
     user.email = email
-    console.log(email)
+    
 
     if (!phone) {
       res.status(422).json({ message: "O telefone é obrigatório." })
@@ -206,7 +205,6 @@ module.exports = class UserController {
       const passHash = await bcrypt.hash(password, salt)
       user.password = passHash
     }
-    
     const newPassword = user.password
 
     if (!ucpf) {
@@ -225,16 +223,11 @@ module.exports = class UserController {
       })
       return
     }
-    
     user.ucpf = fucpf
-    // console.log(cpfExists.id +"="+ id+"?")
-    console.log(`CPF formatado: ${fucpf}`)
 
     const userData = {
       name, email, phone, password: newPassword, image, ucpf: fucpf
     }
-
-    console.log(userData)
 
     try {
       const updatedUser = await User.update(userData, {
@@ -242,7 +235,7 @@ module.exports = class UserController {
           id
         }
       })
-      console.log(updatedUser)
+      // console.log(updatedUser)
       res.status(200).json({
         message: "Usuário atualizado com sucesso."
       })
