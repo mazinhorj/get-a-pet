@@ -47,11 +47,13 @@ module.exports = class UserController {
       res.status(422).json({ message: "CPF inválido." })
       return
     }
-    const ucpfExists = await User.findOne({ where: { ucpf: ucpf } })
+    const fucpf = CPF.format(ucpf)
+    const ucpfExists = await User.findOne({ where: { ucpf: fucpf } })
     if (ucpfExists) {
       res.status(422).json({ message: "CPF já cadastrado." })
       return
     }
+    console.log(`CPF formatado: ${fucpf}`)
 
     //verificar se existe
     const userExists = await User.findOne({ where: { email: email } })
@@ -67,7 +69,7 @@ module.exports = class UserController {
     //criar usuario
 
     try {
-      const newUser = await User.create({ name, email, phone, password: passHash, ucpf })
+      const newUser = await User.create({ name, email, phone, password: passHash, ucpf: fucpf })
       await createUserToken(newUser, req, res)
       console.log(newUser)
 
@@ -175,7 +177,7 @@ module.exports = class UserController {
     }
     // verificar se email já está cadastrado
     const userExists = await User.findOne({ where: { email: email } })
-    if (user.email !== email && userExists) {
+    if (user.email !== email && user.id !== id) {
       res.status(422).json({
         message: "E-mail já está em uso. Utilize outro."
       })
@@ -209,21 +211,24 @@ module.exports = class UserController {
       res.status(422).json({ message: "O CPF é obrigatório." })
       return
     }
-    const ucpfExists = await User.findOne({ where: { ucpf: ucpf } })
-    if (user.ucpf !== ucpf && ucpfExists) {
+    if (!CPF.isValid(ucpf)) {
+      res.status(422).json({ message: "CPF inválido." })
+      return
+    }
+    const fucpf = CPF.format(ucpf)
+    const ucpfExists = await User.findOne({ where: { ucpf: fucpf } })
+    if (ucpfExists.ucpf !== ucpf && ucpfExists.id !== user.id) {
       res.status(422).json({
         message: "CPF já cadastrado."
       })
       return
     }
-    if (!CPF.isValid(ucpf)) {
-      res.status(422).json({ message: "CPF inválido." })
-      return
-    }
-    user.ucpf = ucpf
+
+    user.ucpf = fucpf
+    console.log(`CPF formatado: ${fucpf}`)
 
     const userData = {
-      name, email, phone, password: newPassword, image, ucpf
+      name, email, phone, password: newPassword, image, ucpf: fucpf
     }
 
     console.log(userData)
