@@ -23,6 +23,10 @@ const User = db.define('User', {
   phone: {
     type: DataTypes.STRING,
     required: true
+  },
+  ucpf: {
+    type: DataTypes.STRING,
+    required: true
   }
 });
 

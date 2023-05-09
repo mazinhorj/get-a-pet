@@ -1,3 +1,4 @@
+const CPF = require('cpf')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const User = require('../models/User')
@@ -12,7 +13,7 @@ module.exports = class UserController {
 
   // CADASTRO DE USUÁRIO
   static async register(req, res) {
-    const { name, email, phone, password, confirmpassword } = req.body
+    const { name, email, phone, password, confirmpassword, ucpf } = req.body
     // validations
     if (!name) {
       res.status(422).json({ message: "O Nome é obrigatório." })
@@ -38,6 +39,19 @@ module.exports = class UserController {
       res.status(422).json({ message: "As senhas não conferem." })
       return
     }
+    if (!ucpf) {
+      res.status(422).json({ message: "O CPF é obrigatório." })
+      return
+    }
+    if (CPF.isValid(ucpf) === false) {
+      res.status(422).json({ message: "CPF inválido." })
+      return
+    }
+    const ucpfExists = await User.findOne({ where: { ucpf: ucpf } })
+    if (ucpfExists) {
+      res.status(422).json({ message: "CPF já cadastrado." })
+      return
+    }
 
     //verificar se existe
     const userExists = await User.findOne({ where: { email: email } })
@@ -53,7 +67,7 @@ module.exports = class UserController {
     //criar usuario
 
     try {
-      const newUser = await User.create({ name, email, phone, password: passHash })
+      const newUser = await User.create({ name, email, phone, password: passHash, ucpf })
       await createUserToken(newUser, req, res)
       console.log(newUser)
 
@@ -120,7 +134,6 @@ module.exports = class UserController {
       })
       return
     }
-    // user.password = undefined
 
     res.status(200).json({ user })
     return
@@ -141,7 +154,7 @@ module.exports = class UserController {
     // usuario existe?
     const token = getToken(req)
     const user = await getUserByToken(token)
-    const { name, email, phone, password, confirmpassword } = req.body
+    const { name, email, phone, password, confirmpassword, ucpf } = req.body
 
     let image = ''
 
@@ -192,8 +205,25 @@ module.exports = class UserController {
     
     const newPassword = user.password
 
+    if (!ucpf) {
+      res.status(422).json({ message: "O CPF é obrigatório." })
+      return
+    }
+    const ucpfExists = await User.findOne({ where: { ucpf: ucpf } })
+    if (user.ucpf !== ucpf && ucpfExists) {
+      res.status(422).json({
+        message: "CPF já cadastrado."
+      })
+      return
+    }
+    if (!CPF.isValid(ucpf)) {
+      res.status(422).json({ message: "CPF inválido." })
+      return
+    }
+    user.ucpf = ucpf
+
     const userData = {
-      name, email, phone, password: newPassword, image
+      name, email, phone, password: newPassword, image, ucpf
     }
 
     console.log(userData)
