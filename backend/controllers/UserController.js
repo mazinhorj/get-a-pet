@@ -144,8 +144,8 @@ module.exports = class UserController {
   // Editar usuário
   static async editUser(req, res) {
 
-    const id = req.params.id
-    const idExists = await User.findOne({ where: { id: id } })
+    const uid = req.params.id
+    const idExists = await User.findOne({ where: { id: uid } })
     if (!idExists) {
       res.status(422).json({
         message: "Usuário não encontrado."
@@ -156,7 +156,7 @@ module.exports = class UserController {
     // usuario existe?
     const token = getToken(req)
     const user = await getUserByToken(token)
-    const { name, email, phone, password, confirmpassword, ucpf } = req.body
+    const { id, name, email, phone, password, confirmpassword, ucpf } = req.body
 
     let image = ''
 
@@ -176,14 +176,16 @@ module.exports = class UserController {
       return
     }
     // verificar se email já está cadastrado
-    const userExists = await User.findOne({ where: { email: email } })
-    if (user.email !== email && user.id !== id) {
+    const emailExists = await User.findOne({ where: { email }, attributes: ['id'] })
+    if (user.email !== email && emailExists && emailExists.id !== id) {
       res.status(422).json({
         message: "E-mail já está em uso. Utilize outro."
       })
       return
     }
+    
     user.email = email
+    console.log(email)
 
     if (!phone) {
       res.status(422).json({ message: "O telefone é obrigatório." })
@@ -216,15 +218,16 @@ module.exports = class UserController {
       return
     }
     const fucpf = CPF.format(ucpf)
-    const ucpfExists = await User.findOne({ where: { ucpf: fucpf } })
-    if (ucpfExists.ucpf !== ucpf && ucpfExists.id !== user.id) {
+    const cpfExists = await User.findOne({ where: { ucpf: fucpf }, attributes: ['id'] })
+    if (user.ucpf !== fucpf && cpfExists && cpfExists.id !== id) {
       res.status(422).json({
         message: "CPF já cadastrado."
       })
       return
     }
-
+    
     user.ucpf = fucpf
+    // console.log(cpfExists.id +"="+ id+"?")
     console.log(`CPF formatado: ${fucpf}`)
 
     const userData = {
