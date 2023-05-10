@@ -19,13 +19,15 @@ app.use(cors({
 //routes
 const UserRoutes = require('./routes/UserRoutes')
 app.use('/users', UserRoutes)
+const PetRoutes = require('./routes/PetRoutes')
+app.use('/pets', PetRoutes)
 
 app.use(express.static('public'))
 
 const conn = require('./db/conn');
 try {
   conn
-    // .sync({ force: true })
+    .sync({ force: true })
     .sync()
 }
 catch (err) { console.log("Não conectou ao DB: " + err.message) };

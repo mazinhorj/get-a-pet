@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
 const db = require('../db/conn');
+const Pet = require('./Pet')
 
 const User = db.define('User', {
   name: {
@@ -17,9 +18,6 @@ const User = db.define('User', {
     allowNull: false,
     required: true
   },
-  image: {
-    type: DataTypes.STRING
-  },
   phone: {
     type: DataTypes.STRING,
     required: true
@@ -27,7 +25,13 @@ const User = db.define('User', {
   ucpf: {
     type: DataTypes.STRING,
     required: true
+  },
+  image: {
+    type: DataTypes.STRING
   }
 });
+
+User.hasMany(Pet)
+
 
 module.exports = User;

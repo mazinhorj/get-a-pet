@@ -21,7 +21,7 @@ const imageUpload = multer({
   storage: imageStorage,
   fileFilter(req, file, cb) {
     if (!file.originalname.match(/\.(png|jpg)$/)) {
-      return cb(new Error("Formato de imagem inválido! Utilize apenas jpg ou png."))
+      return cb(new Error("Formato de arquivo inválido! Utilize apenas jpg ou png."))
     }
     cb(undefined, true)
   }
