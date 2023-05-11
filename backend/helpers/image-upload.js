@@ -3,7 +3,7 @@ const path = require('path')
 
 
 const imageStorage = multer.diskStorage({
-  destination: function (req, file, cb) {
+  destination: (req, file, cb) => {
     let folder = ""
     if (req.baseUrl.includes('users')) {
       folder = "users"
@@ -12,14 +12,15 @@ const imageStorage = multer.diskStorage({
     }
     cb(null, `public/images/${folder}`)
   },
-  filename: function (req, file, cb) {
+  filename: (req, file, cb) => {
     cb(null, Date.now() + path.extname(file.originalname))
   }
 })
 
 const imageUpload = multer({
   storage: imageStorage,
-  fileFilter(req, file, cb) {
+  limits: {fileSize: '1000000'},
+  fileFilter: (req, file, cb) => {
     if (!file.originalname.match(/\.(png|jpg)$/)) {
       return cb(new Error("Formato de arquivo inválido! Utilize apenas jpg ou png."))
     }

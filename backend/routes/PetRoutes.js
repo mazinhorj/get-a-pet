@@ -5,7 +5,7 @@ const PetController = require('../controllers/PetController')
 const verifyToken = require('../helpers/verify-token')
 const { imageUpload } = require('../helpers/image-upload')
 
-router.post('/add', PetController.add)
+router.post('/add', verifyToken, imageUpload.array('petpic', 3), PetController.add)
 // router.post('/login', PetController.login)
 // router.get('/chkuser', PetController.chkUser)
 // router.get('/:id', PetController.getPetById)

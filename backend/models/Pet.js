@@ -1,6 +1,7 @@
 const { DataTypes } = require('sequelize');
 const db = require('../db/conn');
 const PetImage = require('./PetImage')
+const User = require('./User')
 
 const Pet = db.define('Pet', {
   name: {
@@ -9,7 +10,7 @@ const Pet = db.define('Pet', {
     required: true
   },
   age: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.STRING,
     allowNull: false,
     required: true
   },
@@ -22,18 +23,16 @@ const Pet = db.define('Pet', {
     type: DataTypes.STRING,
     required: true
   },
-  // images: {
-  //   type: DataTypes.JSON
-  // },
   available: {
     type: DataTypes.BOOLEAN,
   },
-  
-  // user: Object,
-  // adopter: Object
+  owner: {
+    type: DataTypes.TINYINT,
+  }
 });
 
 Pet.hasMany(PetImage);
-Pet.belongsTo(PetImage, {as: 'ProfilePetPic', constraints: false});
+Pet.belongsTo(PetImage, {as: 'profilepetpic', constraints: false});
+
 
 module.exports = Pet;

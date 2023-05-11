@@ -31,7 +31,8 @@ const User = db.define('User', {
   }
 });
 
-User.hasMany(Pet)
+User.hasMany(Pet);
+// Pet.belongsTo(User, { as: 'adopter', constraints: false });
 
 
 module.exports = User;
