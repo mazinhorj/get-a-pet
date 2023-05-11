@@ -62,14 +62,16 @@ module.exports = class PetController {
     })
 
     // console.log(allPetPics)
-    console.log(petpic.length)
-    // while (petpic.length > allPics) {
-    // }
-    allPetPics.shift()
+    // console.log(petpic.length)
+
+    // allPetPics.shift()
+    allPetPics = petpic.slice(allPics)
     console.log(allPetPics)
     try {
       const newPet = await Pet.create({ name, age, weight, color, available, owner: user.id })
-      await PetImage.bulkCreate([{ petpic: allPetPics }])
+      while (allPetPics.length >= 0) {
+        await PetImage.create({ petpic: allPetPics })
+      }
       // console.log(newPet)
       // console.log(newPetPic)
       res.status(201).json({ message: `${name} cadastrado com sucesso.`, newPet, allPetPics })
