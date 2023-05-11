@@ -1,13 +1,12 @@
 const { DataTypes } = require('sequelize');
 const db = require('../db/conn');
 
-const Image = db.define('Image', {
+const PetImage = db.define('Image', {
 
   petpic: {
-    type: DataTypes.STRING,
-    allowNull: false,
+    type: DataTypes.STRING
   }
 
 });
 
-module.exports = Image
+module.exports = PetImage

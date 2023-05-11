@@ -1,6 +1,7 @@
 const { DataTypes } = require('sequelize');
 const db = require('../db/conn');
 const Pet = require('./Pet')
+const PetImage = require('./PetImage')
 
 const User = db.define('User', {
   name: {
@@ -31,8 +32,10 @@ const User = db.define('User', {
   }
 });
 
-User.hasMany(Pet);
-// Pet.belongsTo(User, { as: 'adopter', constraints: false });
+User.hasMany(Pet, {foreignKey: 'ownerId'});
+User.hasMany(PetImage, { foreignKey: 'ownerId' });
+User.hasMany(PetImage, { foreignKey: 'adopterId' });
+Pet.belongsTo(User, { as: 'adopter', constraints: false });
 
 
 module.exports = User;

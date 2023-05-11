@@ -6,22 +6,18 @@ const PetImage = require('../models/PetImage')
 // helpers
 const getToken = require('../helpers/get-token')
 const getUserByToken = require('../helpers/get-user-by-token')
+const { where } = require('sequelize')
 
 
 module.exports = class PetController {
 
 
   static async add(req, res) {
-    // var numeros = ["A", 2, 3, 4, 6, 7, 8, 9, 10];
 
-    // numeros = numeros.filter(item => item >= 3);
-    // numeros.splice(numeros.indexOf(3), 1);
-    // console.log(numeros);
-    // res.json({message: "Vem bicho aí"})
     // destructuring consts coming from body
     const { name, age, weight, color } = req.body
     const available = true
-    
+
     // images upload
     const petpic = req.files
     let allPics = petpic.length
@@ -50,38 +46,194 @@ module.exports = class PetController {
     }
 
 
-
     // get pet owner
     const token = getToken(req)
     const user = await getUserByToken(token)
-    
-    // adding a pet  
-    let allPetPics = {petpic}
+
+    // getting pet images
+    let allPetPics = { petpic }
     petpic.map((pic) => {
       allPetPics.petpic.push(pic.filename)
     })
-
-    // console.log(allPetPics)
-    // console.log(petpic.length)
-
-    // allPetPics.shift()
     allPetPics = petpic.slice(allPics)
-    console.log(allPetPics)
+
+    // adding a pet  
     try {
-      const newPet = await Pet.create({ name, age, weight, color, available, owner: user.id })
-      while (allPetPics.length >= 0) {
-        await PetImage.create({ petpic: allPetPics })
-      }
-      // console.log(newPet)
-      // console.log(newPetPic)
+      const newPet = await Pet.create({ name, age, weight, color, available, ownerId: user.id })
+      allPetPics.forEach(p => { PetImage.create({ petpic: p, petId: newPet.id, ownerId: user.id }) })
+
       res.status(201).json({ message: `${name} cadastrado com sucesso.`, newPet, allPetPics })
-      
-      // await createUserToken(newUser, req, res)
-      
+
     } catch (error) {
-      res.status(500).json({ message: error })
+      res.status(500).json({ message: "Algo não saiu como esperado. Tente de novo: " + error })
     }
 
   }
+
+
+  static async allPets(req, res) {
+
+    const pets = await Pet.findAll({ order: [['updatedAt', 'DESC']] })
+    const petpics = await PetImage.findAll()
+    res.status(200).json({ pets, petpics })
+
+  }
+
+
+  static async allUserPets(req, res) {
+
+    const token = getToken(req)
+    const user = await getUserByToken(token)
+
+    const pets = await Pet.findAll({ where: { ownerId: user.id }, order: [['updatedAt', 'DESC']] })
+    const adoptedPets = await Pet.findAll({ where: { adopterId: user.id }, order: [['updatedAt', 'DESC']] })
+    const petpics = await PetImage.findAll({ where: { ownerId: user.id } })
+    res.status(200).json({ pets, adoptedPets, petpics })
+
+  }
+
+
+  static async allUserAdoptions(req, res) {
+
+    const token = getToken(req)
+    const user = await getUserByToken(token)
+
+    const pets = await Pet.findAll({ where: { adopterId: user.id }, order: [['updatedAt', 'DESC']] })
+    const petpics = await PetImage.findAll({ where: { adopterId: user.id } })
+    res.status(200).json({ pets, petpics })
+
+  }
+
+
+  static async getPetById(req, res) {
+
+    const id = req.params.id
+
+    if (!id) {
+      res.status(422).json({ message: "Precisa informar um ID!" })
+      return
+    }
+
+    const pet = await Pet.findOne({ where: { id } })
+
+    if (!pet) {
+      res.status(404).json({ message: "Pet não encontrado" })
+      return
+    }
+
+    res.status(200).json({ pet })
+
+  }
+
+
+  static async removePetById(req, res) {
+
+    const id = req.params.id
+
+    if (!id) {
+      res.status(422).json({ message: "Precisa informar um ID para excluir!" })
+      return
+    }
+
+    const pet = await Pet.findOne({ where: { id } })
+
+    if (!pet) {
+      res.status(404).json({ message: "Pet não encontrado" })
+      return
+    }
+
+    const token = getToken(req)
+    const user = await getUserByToken(token)
+
+    if (pet.ownerId.toString() !== user.id.toString()) {
+      res.status(422).json({ message: "Houve um problema ao processar sua solicitação! Por favor, tente mais tarde." })
+      return
+    }
+
+    await Pet.destroy({ where: { id } })
+
+    res.status(200).json({ message: "Pet excluído com sucesso" })
+
+  }
+
+
+  static async editPet(req, res) {
+
+    const id = req.params.id
+    const { name, age, weight, color, available } = req.body
+    const petpic = req.files
+    const updatedPetData = {}
+
+    if (!id) {
+      res.status(422).json({ message: "Precisa informar um ID para editar!" })
+      return
+    }
+
+    const pet = await Pet.findOne({ where: { id } })
+
+    if (!pet) {
+      res.status(404).json({ message: "Pet não encontrado" })
+      return
+    }
+
+    const token = getToken(req)
+    const user = await getUserByToken(token)
+
+    if (pet.ownerId.toString() !== user.id.toString()) {
+      res.status(422).json({ message: "Houve um problema ao processar sua solicitação! Por favor, tente mais tarde." })
+      return
+    }
+
+    let allPics = petpic.length
+    console.log(`VIERAM ${allPics} FOTOS`)
+
+    // validations
+    if (!name) {
+      res.status(422).json({ message: "O Nome é obrigatório." })
+      return
+    } else {
+      updatedPetData.name = name
+    }
+    if (!age) {
+      res.status(422).json({ message: "A idade é obrigatória." })
+      return
+    } else {
+      updatedPetData.age = age
+    }
+    if (!weight) {
+      res.status(422).json({ message: "O peso é obrigatório." })
+      return
+    } else {
+      updatedPetData.weight = weight
+    }
+    if (!color) {
+      res.status(422).json({ message: "A cor é obrigatória." })
+      return
+    } else {
+      updatedPetData.color = color
+    }
+    if (petpic.length === 0) {
+      res.status(422).json({ message: "Pelo menos 1 foto é obrigatória." })
+      return
+    }
+
+    let allPetPics = { petpic }
+    petpic.map((pic) => {
+      allPetPics.petpic.push(pic.filename)
+    })
+    allPetPics = petpic.slice(allPics)
+
+    try {
+      const editedPet = await Pet.update({ where: { id }, updatedPetData })
+      allPetPics.forEach(p => { PetImage.create({ petpic: p, petId: editedPet.id, ownerId: user.id }) })
+
+      res.status(201).json({ message: `${name} atualizado com sucesso.`, editedPet, allPetPics })
+
+    } catch (error) {
+      res.status(500).json({ message: "Algo não saiu como esperado. Tente de novo: " + error })
+    }
+
+  }
+
 
 }

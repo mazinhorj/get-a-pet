@@ -3,6 +3,7 @@ const db = require('../db/conn');
 const PetImage = require('./PetImage')
 const User = require('./User')
 
+
 const Pet = db.define('Pet', {
   name: {
     type: DataTypes.STRING,
@@ -26,13 +27,11 @@ const Pet = db.define('Pet', {
   available: {
     type: DataTypes.BOOLEAN,
   },
-  owner: {
-    type: DataTypes.TINYINT,
-  }
 });
 
-Pet.hasMany(PetImage);
+Pet.hasMany(PetImage, { foreignKey: 'petId' });
 Pet.belongsTo(PetImage, {as: 'profilepetpic', constraints: false});
+
 
 
 module.exports = Pet;

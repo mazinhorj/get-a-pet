@@ -29,8 +29,11 @@ const conn = require('./db/conn');
 try {
   conn
     // .sync({ force: true })
+    // .then(console.log("Limpando o banco e recriando tabelas..."))
     .sync()
+    .then(console.log("Sincronizando tabelas..."))
 }
 catch (err) { console.log("Não conectou ao DB: " + err.message) };
+
 
 app.listen(5000)
