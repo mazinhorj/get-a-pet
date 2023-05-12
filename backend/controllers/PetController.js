@@ -3,6 +3,8 @@
 const Pet = require('../models/Pet')
 const PetImage = require('../models/PetImage')
 
+const User = require('../models/User')
+
 // helpers
 const getToken = require('../helpers/get-token')
 const getUserByToken = require('../helpers/get-user-by-token')
@@ -99,8 +101,20 @@ module.exports = class PetController {
     const user = await getUserByToken(token)
 
     const pets = await Pet.findAll({ where: { adopterId: user.id }, order: [['updatedAt', 'DESC']] })
+
+    if (pets.length === 0) {
+      res.status(404).json({ message: "Você ainda não adotou nenhum pet." })
+      return
+    }
+
     const petpics = await PetImage.findAll({ where: { adopterId: user.id } })
-    res.status(200).json({ pets, petpics })
+    if (petpics.length === 0) {
+      res.json({ pets, message: "Sem fotos pare exibir." })
+      return
+    } else {
+      res.status(200).json({ pets, petpics })
+    }
+
 
   }
 
@@ -145,7 +159,7 @@ module.exports = class PetController {
     const token = getToken(req)
     const user = await getUserByToken(token)
 
-    if (pet.ownerId.toString() !== user.id.toString()) {
+    if (pet.ownerId !== user.id) {
       res.status(422).json({ message: "Houve um problema ao processar sua solicitação! Por favor, tente mais tarde." })
       return
     }
@@ -179,7 +193,24 @@ module.exports = class PetController {
     const token = getToken(req)
     const user = await getUserByToken(token)
 
-    if (pet.ownerId.toString() !== user.id.toString()) {
+    const petOwner = await User.findOne({ where: { id: pet.ownerId } })
+
+    console.log(pet.adopterId + "<=>" + user.id)
+
+    // esse codigo permite que o adotante faça alterações no pet
+    // if (pet.adopterId) {
+    //   if (pet.adopterId !== user.id) {
+    //     res.status(422).json({ message: "Houve um problema ao processar sua solicitação! Por favor, tente mais tarde." })
+    //     return
+    //   }
+    // } else if (pet.ownerId !== user.id) {
+    //   res.status(422).json({ message: "Houve um problema ao processar sua solicitação! Por favor, tente mais tarde." })
+    //   return
+    // }
+    // ---------------------------------------------------------------------------------
+
+    // dessa forma apenas quem cadastrou (o dono) o pet pode alterá-lo
+    if (pet.ownerId !== user.id) {
       res.status(422).json({ message: "Houve um problema ao processar sua solicitação! Por favor, tente mais tarde." })
       return
     }
@@ -232,6 +263,57 @@ module.exports = class PetController {
     } catch (error) {
       res.status(500).json({ message: "Algo não saiu como esperado. Tente de novo: " + error })
     }
+
+  }
+
+
+  static async schedule(req, res) {
+
+    const id = req.params.id
+    const { name, age, weight, color, available, ownerId } = req.body
+    const petpic = req.files
+    const updatedPetData = {}
+
+    if (!id) {
+      res.status(422).json({ message: "Precisa informar um ID para editar!" })
+      return
+    }
+
+    const pet = await Pet.findOne({ where: { id } })
+
+    if (!pet) {
+      res.status(404).json({ message: "Pet não encontrado" })
+      return
+    }
+
+    const token = getToken(req)
+    const user = await getUserByToken(token)
+    if (pet.ownerId === user.id) {   //
+      res.status(422).json({ message: "Não pode agendar visita. Este pet é seu!" })
+      return
+    }
+    // console.log(user)
+
+    if (pet.adopterId) {
+      if (pet.adopterId === user.id) {
+        res.status(422).json({ message: "Visita já agendada!" })
+        return
+      }
+    }
+
+    const petOwner = await User.findOne({ where: { id: pet.ownerId } })
+    // console.log(petOwner.name)
+    // console.log("ANTES DE SALVAR O ADOTANTE")
+    // console.log(pet)
+
+    pet.adopterId = user.id
+
+    await pet.save()
+    // await Pet.update(pet, { where: { id } })
+    res.status(200).json({ message: `Visita para ${pet.name} agendada. Entre em contato com ${petOwner.name} pelo telefone ${petOwner.phone}.`, pet })
+
+    // console.log(`DEPOIS DE SALVAR O ADOTANTE`)
+    // console.log(pet)
 
   }
 
